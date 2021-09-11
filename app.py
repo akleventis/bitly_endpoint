@@ -10,23 +10,38 @@ def hello(auth_token):
     }
 
     # get group guid
-    response = requests.get('https://api-ssl.bitly.com/v4/user', headers=headers)
+    try:
+        response = requests.get('https://api-ssl.bitly.com/v4/user', headers=headers)
+    except requests.exceptions.RequestException as e:
+        raise(SystemExit(e))
+
     group_guid = response.json()['default_group_guid']
+
+    # grab name for a steezy http response
     name = response.json()['name']
 
     # get list of links
-    response = requests.get(f'https://api-ssl.bitly.com/v4/groups/{group_guid}/bitlinks', headers=headers)
+    try:
+        response = requests.get(f'https://api-ssl.bitly.com/v4/groups/{group_guid}/bitlinks', headers=headers)
+    except requests.exceptions.RequestException as e:
+        raise(SystemExit(e))
+
     links = response.json()['links']    
 
-    
     countries = {} # Eventually return this dictionary holding {<country>: <average daily clicks over past month>}
+
+    # loop over all bitlinks
     for i in range(len(links)):
 
         # grab bitlink
         bitlink = links[i]['id']
 
         # request for clicks over past 30 days
-        response = requests.get(f'https://api-ssl.bitly.com/v4/bitlinks/{bitlink}/countries?day=month&units=30', headers=headers)
+        try:
+            response = requests.get(f'https://api-ssl.bitly.com/v4/bitlinks/{bitlink}/countries?day=month&units=30', headers=headers)
+        except requests.exceptions.RequestException as e:
+            raise(SystemExit(e))
+
         data = response.json()
 
         metrics = data['metrics']
