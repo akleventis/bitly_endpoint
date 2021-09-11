@@ -42,7 +42,7 @@ def hello(auth_token):
     
     # divide each click by 30 => "average daily clicks"
     for key, value in countries.items():
-        countries[key] = float(f'{value/30:.5f}')
+        countries[key] = float(f'{(value/30):.5f}')
 
     return jsonify({f'{name}\'s average daily clicks per country over the past month': countries})
     
