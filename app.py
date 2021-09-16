@@ -9,14 +9,14 @@ def getData():
 
     Service = CrudService(headers)
 
-    # https://api-ssl.bitly.com/v4/user
-    user = Service.getUser()
-    
-    # grab group guid and name
-    group_guid = user['default_group_guid']
-    name = user['name']
-
-    # https://api-ssl.bitly.com/v4/groups/{group_guid}/bitlinks
+    # Use group guid if url param, else grab users default group guid ei /itsbritneyb?group_guid={guid}
+    group_guid = request.args.get('group_guid')
+    if group_guid:
+        Service.getGroup(group_guid) # validates group_guid, if provided guid is incorrect => error
+    else:   
+        user = Service.getUser()
+        group_guid = user['default_group_guid']
+        
     bitlinks = Service.getLinks(group_guid)
     
     # grab dict of all links data
@@ -26,12 +26,10 @@ def getData():
 
     # loop over all bitlinks
     for i in range(len(links)):
-
-        # grab bitlink
-        bitlink = links[i]['id']
         
-        # https://api-ssl.bitly.com/v4/bitlinks/{bitlink}/countries
-        unit, units = 'month', '30'
+        bitlink = links[i]['id'] # grab bitlink
+
+        unit, units = 'month', '30' # insert units
         clicks = Service.getClicksByCountry(bitlink, unit, units)
 
         metrics = clicks['metrics']
@@ -49,7 +47,7 @@ def getData():
     for key, value in countries.items():
         countries[key] = float(f'{(value/30):.5f}')
 
-    return jsonify({f'{name}\'s average daily clicks per country over the past month': countries})
+    return jsonify({f'Average daily clicks per country over the past month': countries})
     
 
 if __name__=='__main__':
