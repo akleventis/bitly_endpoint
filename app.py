@@ -1,32 +1,26 @@
-from flask import Flask, jsonify
-import requests
-
+from flask import Flask, jsonify, request
+from crudService import CrudService
 app = Flask(__name__)
 
-@app.route("/itsbritneyb/<auth_token>")
-def hello(auth_token):
-    headers = {
-        'Authorization': f'Bearer {auth_token}',
-    }
+@app.route("/itsbritneyb")
+def getData():
 
-    # get group guid
-    try:
-        response = requests.get('https://api-ssl.bitly.com/v4/user', headers=headers)
-    except requests.exceptions.RequestException as e:
-        raise(SystemExit(e))
+    headers = {'Authorization': request.headers.get('Authorization')}
 
-    group_guid = response.json()['default_group_guid']
+    Service = CrudService(headers)
 
-    # grab name for a steezy http response
-    name = response.json()['name']
+    # https://api-ssl.bitly.com/v4/user
+    user = Service.getUser()
+    
+    # grab group guid and name
+    group_guid = user['default_group_guid']
+    name = user['name']
 
-    # get list of links
-    try:
-        response = requests.get(f'https://api-ssl.bitly.com/v4/groups/{group_guid}/bitlinks', headers=headers)
-    except requests.exceptions.RequestException as e:
-        raise(SystemExit(e))
-
-    links = response.json()['links']    
+    # https://api-ssl.bitly.com/v4/groups/{group_guid}/bitlinks
+    bitlinks = Service.getLinks(group_guid)
+    
+    # grab dict of all links data
+    links = bitlinks['links']  
 
     countries = {} # Eventually return this dictionary holding {<country>: <average daily clicks over past month>}
 
@@ -35,16 +29,12 @@ def hello(auth_token):
 
         # grab bitlink
         bitlink = links[i]['id']
+        
+        # https://api-ssl.bitly.com/v4/bitlinks/{bitlink}/countries
+        unit, units = 'month', '30'
+        clicks = Service.getClicksByCountry(bitlink, unit, units)
 
-        # request for clicks over past 30 days
-        try:
-            response = requests.get(f'https://api-ssl.bitly.com/v4/bitlinks/{bitlink}/countries?day=month&units=30', headers=headers)
-        except requests.exceptions.RequestException as e:
-            raise(SystemExit(e))
-
-        data = response.json()
-
-        metrics = data['metrics']
+        metrics = clicks['metrics']
         
         # if country is already in dict, add to total count, otherwise, add new country to dict with click data
         for i in range(len(metrics)):
@@ -61,7 +51,6 @@ def hello(auth_token):
 
     return jsonify({f'{name}\'s average daily clicks per country over the past month': countries})
     
-
 
 if __name__=='__main__':
     app.run(port=5000, debug=True)
